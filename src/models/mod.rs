@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -39,7 +40,7 @@ pub struct LoginResponse {
     pub token: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Claims {
     pub sub: String,
     pub email: String,
@@ -60,6 +61,12 @@ pub struct Customer {
     pub danisan_id: Option<Uuid>,
 }
 
+#[derive(Serialize)]
+pub struct CustomerDetail {
+    pub customer_info: Customer,
+    pub customer_notes: Vec<CustomerNote>,
+}
+
 #[derive(Deserialize)]
 pub struct CreateCustomer {
     pub ad_soyad: String,
@@ -70,6 +77,14 @@ pub struct CreateCustomer {
     pub uyruk: Option<String>,
     pub en_son_gorusuldu: Option<chrono::DateTime<chrono::Utc>>,
     pub danisan_id: Option<Uuid>,
+}
+
+#[derive(Serialize)]
+pub struct PaginatedCustomers {
+    pub data: Vec<Customer>,
+    pub total_count: i64,
+    pub page: i64,
+    pub total_pages: i64,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -85,4 +100,62 @@ pub struct CustomerNote {
 pub struct CreateCustomerNote {
     pub note: String,
     pub created_by: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "cephe_enum")]
+pub enum Cephe {
+    #[sqlx(rename = "KB")]
+    KB,
+    #[sqlx(rename = "KD")]
+    KD,
+    #[sqlx(rename = "GB")]
+    GB,
+    #[sqlx(rename = "GD")]
+    GD,
+    #[sqlx(rename = "KB-KD")]
+    KbKd,
+    #[sqlx(rename = "KD-KB")]
+    KdKb,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct Property {
+    pub id: Uuid,
+    pub daire_no: String,
+    pub blok: String,
+    pub kat: String,
+    pub kapi_no: i32,
+    pub daire_tipi: String,
+    pub oda_sayisi: String,
+    pub brut_m2: BigDecimal,
+    pub net_m2: BigDecimal,
+    pub balkon_m2: Option<BigDecimal>,
+    pub cephe: Option<Cephe>,
+    pub kiraci_var_mi: bool,
+    pub sahip_id: Option<Uuid>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateProperty {
+    pub daire_no: String,
+    pub blok: String,
+    pub kat: String,
+    pub kapi_no: i32,
+    pub daire_tipi: String,
+    pub oda_sayisi: String,
+    pub brut_m2: BigDecimal,
+    pub net_m2: BigDecimal,
+    pub balkon_m2: Option<BigDecimal>,
+    pub cephe: Option<Cephe>,
+    pub kiraci_var_mi: bool,
+    pub sahip_id: Option<Uuid>,
+}
+
+#[derive(Serialize)]
+pub struct PaginatedProperties {
+    pub data: Vec<Property>,
+    pub total_count: i64,
+    pub page: i64,
+    pub total_pages: i64,
 }
