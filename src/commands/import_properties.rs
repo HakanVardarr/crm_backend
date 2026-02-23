@@ -4,6 +4,18 @@ use bigdecimal::BigDecimal;
 use calamine::{Data, Reader, Xlsx, open_workbook};
 use std::str::FromStr;
 
+fn parse_cephe(s: &str) -> Option<crate::models::Cephe> {
+    match s.trim() {
+        "KB" => Some(crate::models::Cephe::KB),
+        "KD" => Some(crate::models::Cephe::KD),
+        "GB" => Some(crate::models::Cephe::GB),
+        "GD" => Some(crate::models::Cephe::GD),
+        "KB-KD" => Some(crate::models::Cephe::KbKd),
+        "KD-KB" => Some(crate::models::Cephe::KdKb),
+        _ => None,
+    }
+}
+
 pub async fn run(db: &Database, filepath: &str) {
     let mut workbook: Xlsx<_> = open_workbook(filepath).expect("Dosya açılamadı");
     let sheet = workbook.worksheet_range_at(0).unwrap().unwrap();
@@ -52,7 +64,7 @@ pub async fn run(db: &Database, filepath: &str) {
             brut_m2: get_decimal(6).unwrap_or_default(),
             net_m2: get_decimal(7).unwrap_or_default(),
             balkon_m2: get_decimal(8),
-            cephe: None, // parse edebilirsin
+            cephe: get_str(9).and_then(|s| parse_cephe(&s)),
             kiraci_var_mi: false,
             sahip_id: None,
         };

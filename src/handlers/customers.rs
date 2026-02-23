@@ -1,32 +1,21 @@
 use crate::{
     AppState,
-    models::{
-        CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote,
-        PaginatedCustomers,
-    },
+    models::{CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote},
 };
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
-pub struct PaginationParams {
-    pub page: Option<i64>,
-}
-
 pub async fn list_customers(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
-) -> Result<Json<PaginatedCustomers>, StatusCode> {
-    let page = params.page.unwrap_or(1);
-
+) -> Result<Json<Vec<Customer>>, StatusCode> {
     let result = state
         .db
-        .list_customers(page, 50)
+        .list_customers()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
