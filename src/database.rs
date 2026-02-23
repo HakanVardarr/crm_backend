@@ -70,6 +70,12 @@ impl Database {
         .await
     }
 
+    pub async fn list_customers(&self) -> Result<Vec<Customer>, sqlx::Error> {
+        sqlx::query_as::<_, Customer>("SELECT id, ad_soyad, gsm, telefon, email, acil_kisi, uyruk, en_son_gorusuldu, danisan_id FROM customers")
+            .fetch_all(&self.pool)
+            .await
+    }
+
     pub async fn create_customer(&self, body: &CreateCustomer) -> Result<Customer, sqlx::Error> {
         sqlx::query_as::<_, Customer>(
         "INSERT INTO customers (ad_soyad, gsm, telefon, email, acil_kisi, uyruk, en_son_gorusuldu, danisan_id)

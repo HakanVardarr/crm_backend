@@ -22,7 +22,10 @@ async fn main() {
 
     let protected = Router::new()
         .route("/users", get(handlers::users::list_users))
-        .route("/customers", post(handlers::customers::create_customer))
+        .route(
+            "/customers",
+            get(handlers::customers::list_customers).post(handlers::customers::create_customer),
+        )
         .route(
             "/customers/:id/consultant",
             post(handlers::customers::assign_consultant),

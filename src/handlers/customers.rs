@@ -10,6 +10,17 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
+pub async fn list_customers(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Customer>>, StatusCode> {
+    let customers = state
+        .db
+        .list_customers()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(customers))
+}
+
 pub async fn create_customer(
     State(state): State<AppState>,
     Json(body): Json<CreateCustomer>,
