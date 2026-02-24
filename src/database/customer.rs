@@ -1,28 +1,36 @@
 use crate::database::Database;
-use crate::models::{CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote};
+use crate::models::{
+    CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote,
+    CustomerWithProperties, Property,
+};
 use uuid::Uuid;
 
 impl Database {
-    pub async fn list_customers(&self) -> Result<Vec<Customer>, sqlx::Error> {
-        let data = sqlx::query_as::<_, Customer>(
-        "SELECT id, ad_soyad, gsm, telefon, email, acil_kisi, uyruk, en_son_gorusuldu, danisan_id
-         FROM customers ORDER BY ad_soyad"
+    pub async fn list_customers(&self) -> Result<Vec<CustomerWithProperties>, sqlx::Error> {
+        sqlx::query_as::<_, CustomerWithProperties>(
+            "SELECT 
+            c.id, c.ad_soyad, c.gsm, c.telefon, c.email, c.acil_kisi, 
+            c.uyruk, c.en_son_gorusuldu, c.danisan_id,
+            COUNT(p.id) AS property_count,
+            STRING_AGG(p.daire_no, ', ' ORDER BY p.daire_no) AS daire_nolar
+         FROM customers c
+         LEFT JOIN properties p ON p.sahip_id = c.id
+         GROUP BY c.id
+         ORDER BY c.ad_soyad",
         )
         .fetch_all(&self.pool)
-        .await?;
-
-        Ok(data)
+        .await
     }
 
     pub async fn customer_detail(&self, customer_id: Uuid) -> Result<CustomerDetail, sqlx::Error> {
         let customer: Customer = sqlx::query_as::<_, Customer>(
         "SELECT id, ad_soyad, gsm, telefon, email, acil_kisi, uyruk, en_son_gorusuldu, danisan_id 
          FROM customers WHERE id = $1"
-        )
-        .bind(customer_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(sqlx::Error::RowNotFound)?;
+    )
+    .bind(customer_id)
+    .fetch_optional(&self.pool)
+    .await?
+    .ok_or(sqlx::Error::RowNotFound)?;
 
         let notes: Vec<CustomerNote> = sqlx::query_as::<_, CustomerNote>(
             "SELECT id, note, created_by, customer_id, created_at 
@@ -32,9 +40,17 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
+        let properties: Vec<Property> = sqlx::query_as::<_, Property>(
+            "SELECT * FROM properties WHERE sahip_id = $1 ORDER BY daire_no",
+        )
+        .bind(customer_id)
+        .fetch_all(&self.pool)
+        .await?;
+
         Ok(CustomerDetail {
             customer_info: customer,
             customer_notes: notes,
+            customer_properties: properties,
         })
     }
 
@@ -74,6 +90,7 @@ impl Database {
     pub async fn create_customer_note(
         &self,
         customer_id: Uuid,
+        user_id: Uuid,
         body: &CreateCustomerNote,
     ) -> Result<CustomerNote, sqlx::Error> {
         sqlx::query_as::<_, CustomerNote>(
@@ -82,11 +99,25 @@ impl Database {
          RETURNING *",
         )
         .bind(&body.note)
-        .bind(body.created_by)
+        .bind(user_id)
         .bind(customer_id)
         .fetch_one(&self.pool)
         .await
     }
+
+    pub async fn delete_customer_note(&self, note_id: Uuid) -> Result<(), sqlx::Error> {
+        let result = sqlx::query("DELETE FROM customer_notes WHERE id = $1")
+            .bind(note_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        Ok(())
+    }
+
     pub async fn get_or_create_customer(
         &self,
         ad_soyad: &str,

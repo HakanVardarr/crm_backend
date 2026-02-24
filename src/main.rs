@@ -2,7 +2,7 @@ use axum::{
     Router,
     http::{Method, header},
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use tower_http::cors::{Any, CorsLayer};
 
@@ -53,6 +53,7 @@ async fn main() {
     let protected = Router::new()
         .route("/users", get(handlers::users::list_users))
         .route("/users/me", get(handlers::users::me))
+        .route("/users/:id", delete(handlers::users::delete_user))
         .route(
             "/customers",
             get(handlers::customers::list_customers).post(handlers::customers::create_customer),
@@ -65,6 +66,10 @@ async fn main() {
         .route(
             "/customers/:id/notes",
             post(handlers::customers::create_customer_note),
+        )
+        .route(
+            "/customers/:id/notes/:note_id",
+            delete(handlers::customers::delete_customer_note),
         )
         .route("/properties", get(handlers::properties::list_properties))
         .layer(middleware::from_fn_with_state(

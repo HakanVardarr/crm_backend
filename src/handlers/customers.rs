@@ -1,9 +1,14 @@
+use std::str::FromStr;
+
 use crate::{
     AppState,
-    models::{CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote},
+    models::{
+        Claims, CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote,
+        CustomerWithProperties,
+    },
 };
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
 };
@@ -12,7 +17,7 @@ use uuid::Uuid;
 
 pub async fn list_customers(
     State(state): State<AppState>,
-) -> Result<Json<Vec<Customer>>, StatusCode> {
+) -> Result<Json<Vec<CustomerWithProperties>>, StatusCode> {
     let result = state
         .db
         .list_customers()
@@ -72,14 +77,31 @@ pub async fn assign_consultant(
 
 pub async fn create_customer_note(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(customer_id): Path<Uuid>,
     Json(body): Json<CreateCustomerNote>,
 ) -> Result<(StatusCode, Json<CustomerNote>), StatusCode> {
     let note = state
         .db
-        .create_customer_note(customer_id, &body)
+        .create_customer_note(customer_id, Uuid::from_str(&claims.sub).unwrap(), &body)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok((StatusCode::CREATED, Json(note)))
+}
+
+pub async fn delete_customer_note(
+    State(state): State<AppState>,
+    Path((_customer_id, note_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, StatusCode> {
+    state
+        .db
+        .delete_customer_note(note_id)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
+
+    Ok(StatusCode::OK)
 }

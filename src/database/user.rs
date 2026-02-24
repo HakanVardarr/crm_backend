@@ -49,4 +49,17 @@ impl Database {
         .fetch_optional(&self.pool)
         .await
     }
+
+    pub async fn delete_user(&self, user_id: Uuid) -> Result<(), sqlx::Error> {
+        let result = sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        Ok(())
+    }
 }
