@@ -9,3 +9,6 @@ pub use customer::*;
 
 mod properties;
 pub use properties::*;
+
+mod reminders;
+pub use reminders::*;

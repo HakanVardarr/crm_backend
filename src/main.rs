@@ -82,6 +82,10 @@ async fn main() {
             "/customers",
             get(handlers::customers::list_customers).post(handlers::customers::create_customer),
         )
+        .route(
+            "/customers/:id/last-contact",
+            post(handlers::customers::update_last_contact),
+        )
         .route("/customers/:id", get(handlers::customers::customer_detail))
         .route(
             "/customers/:id/consultant",
@@ -94,6 +98,10 @@ async fn main() {
         .route(
             "/customers/:id/notes/:note_id",
             delete(handlers::customers::delete_customer_note),
+        )
+        .route(
+            "/customers/:id/reminders",
+            post(handlers::reminders::create_reminder),
         )
         .route("/properties", get(handlers::properties::list_properties))
         .layer(middleware::from_fn_with_state(

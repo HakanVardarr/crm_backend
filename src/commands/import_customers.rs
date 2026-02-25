@@ -25,6 +25,20 @@ pub async fn run(db: &Database, filepath: &str) {
             continue;
         }
 
+        let daire_no = {
+            let digits: String = daire_no.chars().filter(|c| c.is_ascii_digit()).collect();
+            let letters: String = daire_no.chars().filter(|c| !c.is_ascii_digit()).collect();
+            if digits.len() >= 3 {
+                let blok_no = &digits[..digits.len() - 3].trim_start_matches('0');
+                let kapi_no = digits[digits.len() - 3..].trim_start_matches('0');
+                let blok_no = if blok_no.is_empty() { "0" } else { blok_no };
+                let kapi_no = if kapi_no.is_empty() { "0" } else { kapi_no };
+                format!("{}{}-{}", letters, blok_no, kapi_no)
+            } else {
+                daire_no
+            }
+        };
+
         let property = match db.get_property_by_daire_no(&daire_no).await {
             Ok(Some(p)) => p,
             Ok(None) => {

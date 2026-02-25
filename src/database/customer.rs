@@ -1,7 +1,7 @@
 use crate::database::Database;
 use crate::models::{
     CreateCustomer, CreateCustomerNote, Customer, CustomerDetail, CustomerNote,
-    CustomerWithProperties, Property,
+    CustomerWithProperties, Property, Reminder,
 };
 use uuid::Uuid;
 
@@ -16,7 +16,7 @@ impl Database {
          FROM customers c
          LEFT JOIN properties p ON p.sahip_id = c.id
          GROUP BY c.id
-         ORDER BY c.ad_soyad",
+         ORDER BY c.en_son_gorusuldu DESC",
         )
         .fetch_all(&self.pool)
         .await
@@ -47,10 +47,18 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
+        let reminders: Vec<Reminder> = sqlx::query_as::<_, Reminder>(
+            "SELECT * FROM reminders WHERE customer_id = $1 ORDER BY reminder_date",
+        )
+        .bind(customer_id)
+        .fetch_all(&self.pool)
+        .await?;
+
         Ok(CustomerDetail {
             customer_info: customer,
             customer_notes: notes,
             customer_properties: properties,
+            customer_reminders: reminders,
         })
     }
 
@@ -127,6 +135,18 @@ impl Database {
         acil_kisi: &str,
         uyruk: &str,
     ) -> Result<Customer, sqlx::Error> {
+        let existing = sqlx::query_as::<_, Customer>(
+            "SELECT * FROM customers WHERE ad_soyad = $1 AND gsm = $2",
+        )
+        .bind(ad_soyad)
+        .bind(if gsm.is_empty() { None } else { Some(gsm) })
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(customer) = existing {
+            return Ok(customer);
+        }
+
         sqlx::query_as::<_, Customer>(
             "INSERT INTO customers (ad_soyad, gsm, telefon, email, acil_kisi, uyruk)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -148,5 +168,15 @@ impl Database {
         .bind(if uyruk.is_empty() { None } else { Some(uyruk) })
         .fetch_one(&self.pool)
         .await
+    }
+
+    pub async fn update_last_contact(&self, customer_id: Uuid) -> Result<Customer, sqlx::Error> {
+        sqlx::query_as::<_, Customer>(
+            "UPDATE customers SET en_son_gorusuldu = NOW() WHERE id = $1 RETURNING *",
+        )
+        .bind(customer_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)
     }
 }

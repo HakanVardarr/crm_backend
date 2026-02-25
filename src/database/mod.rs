@@ -10,6 +10,7 @@ pub enum DatabaseError {
 
 mod customer;
 mod property;
+mod reminder;
 mod user;
 
 #[derive(Clone)]

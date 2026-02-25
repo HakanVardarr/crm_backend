@@ -105,3 +105,20 @@ pub async fn delete_customer_note(
 
     Ok(StatusCode::OK)
 }
+
+pub async fn update_last_contact(
+    State(state): State<AppState>,
+    Extension(_claims): Extension<Claims>,
+    Path(customer_id): Path<Uuid>,
+) -> Result<Json<Customer>, StatusCode> {
+    let customer = state
+        .db
+        .update_last_contact(customer_id)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
+
+    Ok(Json(customer))
+}

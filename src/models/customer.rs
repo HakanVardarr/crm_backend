@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::Property;
+use crate::models::{Property, Reminder};
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Customer {
@@ -36,6 +36,7 @@ pub struct CustomerDetail {
     pub customer_info: Customer,
     pub customer_notes: Vec<CustomerNote>,
     pub customer_properties: Vec<Property>,
+    pub customer_reminders: Vec<Reminder>,
 }
 
 #[derive(Deserialize)]
