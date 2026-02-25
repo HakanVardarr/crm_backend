@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
-    models::{Claims, User},
+    models::{Claims, CreateUser, User},
 };
 
 pub async fn list_users(
@@ -25,13 +25,31 @@ pub async fn list_users(
     }
 }
 
+pub async fn create_user(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(body): Json<CreateUser>,
+) -> Result<(StatusCode, Json<User>), StatusCode> {
+    if !claims.is_admin {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let user = state
+        .db
+        .create_user(&body)
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    Ok((StatusCode::CREATED, Json(user)))
+}
+
 pub async fn delete_user(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     if !claims.is_admin {
-        return Err(StatusCode::FORBIDDEN);
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
     if claims.sub == user_id.to_string() {

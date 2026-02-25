@@ -45,19 +45,6 @@ pub async fn login(
     Ok(Json(LoginResponse { token }))
 }
 
-pub async fn register(
-    State(state): State<AppState>,
-    Json(body): Json<CreateUser>,
-) -> Result<(StatusCode, Json<User>), StatusCode> {
-    let user = state
-        .db
-        .create_user(&body)
-        .await
-        .map_err(|_| StatusCode::BAD_REQUEST)?; // email zaten varsa 400
-
-    Ok((StatusCode::CREATED, Json(user)))
-}
-
 pub async fn auth_middleware(
     State(_state): State<AppState>,
     mut req: Request,
